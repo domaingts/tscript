@@ -1,9 +1,41 @@
 interface Ctx {
     env?: Record<string, string>;
+    device: Device,
+    proxy: any;
     http: {
         get(url: string, options?: Options): Promise<Response>;
+        post(url: string, options?: Options): Promise<Response>;
     };
     widgetFamily: string,
+}
+
+interface Device {
+    cellular?: Cellular,
+    wifi?: Wifi,
+    ipv4?: Ipv4,
+    ipv6?: Ipv6,
+    dnsServers?: string[],
+}
+
+interface Cellular {
+    carrier?: string,
+    radio?: string,
+}
+
+interface Wifi {
+    ssid?: string,
+    bssid?: string,
+}
+
+interface Ipv4 {
+    address?: string,
+    gateway?: string,
+    interface?: string,
+}
+
+interface Ipv6 {
+    address?: string,
+    interface?: string,
 }
 
 interface Options {

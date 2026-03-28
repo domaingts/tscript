@@ -8,6 +8,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "esnext",
     "target": "es2020",
+    "removeComments": true,
     // "types": [],
     "typeRoots": ["types"],
     // For nodejs:
