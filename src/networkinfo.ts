@@ -3,8 +3,8 @@ export default async function (ctx: Ctx) {
     // ── 全局防崩溃时间基准 ──────────────────────────────────────────
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
-    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    const nextRefreshTime = new Date(now.getFullYear(), now.getMonth(), now.getHours(), now.getMinutes(), now.getSeconds() + 20);
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const nextRefreshTime = new Date(now.getFullYear(), now.getMonth(), now.getHours(), now.getMinutes() + 5);
 
     // ── 调色板（支持深浅色自适应）────────────────────────────────────
     const C = {
@@ -33,7 +33,7 @@ export default async function (ctx: Ctx) {
     const httpGet = async (url: string) => {
         try {
             const start = Date.now();
-            const resp = await ctx.http.get(url, { headers: { "User-Agent": "Mozilla/5.0" }, timeout: 8000 });
+            const resp = await ctx.http.get(url, { headers: { "User-Agent": "Mozilla/5.0" }, timeout: 5000 });
             const json = await resp.json();
             return { data: json.data || json, ping: Date.now() - start };
         } catch (e) { return { data: {}, ping: 0 }; }
