@@ -3,7 +3,7 @@ export default async function (ctx: Ctx) {
     // ── 全局防崩溃时间基准 ──────────────────────────────────────────
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
-    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     const nextRefreshTime = new Date(now.getFullYear(), now.getMonth(), now.getHours(), now.getMinutes(), now.getSeconds() + 20);
 
     // ── 调色板（支持深浅色自适应）────────────────────────────────────
@@ -24,6 +24,8 @@ export default async function (ctx: Ctx) {
 
     const mkText = (text: string, size: number | string, weight: string, color: Color | AdaptiveColor, opts: Partial<TextElement> = {}): TextElement =>
         ({ type: "text", text: text, font: { size, weight, ...(opts.font ?? {}) }, textColor: color, ...opts });
+    const mkSimpleText = (text: string, color: Color | AdaptiveColor, opts: Partial<TextElement> = {}): TextElement =>
+        ({ type: "text", text: text, textColor: color, ...opts });
     const mkIcon = (src: string, color: Color | AdaptiveColor, size: number = 13): ImageElement =>
         ({ type: "image", src: `sf-symbol:${src}`, color: color, width: size, height: size });
 
@@ -202,7 +204,6 @@ export default async function (ctx: Ctx) {
                     type: 'stack', direction: 'row', alignItems: 'center', gap: 2, width: 52, children: [
                         mkIcon(icon, color, 13),
                         mkText(label, 12, 'heavy', color),
-                        { type: 'text', text: label, font: { size: 12, weight: 'heavy' }, textColor: color } as TextElement,
                     ]
                 } as StackElement,
                 mkText(content, 12, 'medium', contentColor, { maxLines: 1, minScale: 0.5, flex: 1 }),
@@ -231,14 +232,14 @@ export default async function (ctx: Ctx) {
                                 {
                                     type: 'stack', direction: 'row', alignItems: 'center', gap: 2, children: [
                                         mkIcon('mappin.circle.fill', locColor, 10),
-                                        mkText(localPing > 0 ? `${localPing}` : "-", 10, 'bold', locColor, { font: { family: 'Menlo' } }),
+                                        mkSimpleText(localPing > 0 ? `${localPing}` : "-", locColor, { font: { size: 10, weight: 'bold', family: 'Menlo' } }),
                                     ]
                                 },
                                 mkText('|', 10, 'light', C.muted),
                                 {
                                     type: 'stack', direction: 'row', alignItems: 'center', gap: 2, children: [
                                         mkIcon('globe.fill', nodColor, 10),
-                                        mkText(nodePing > 0 ? `${nodePing}` : "-", 10, 'bold', nodColor, { font: { family: 'Menlo' } }),
+                                        mkSimpleText(nodePing > 0 ? `${nodePing}` : "-", nodColor, { font: { size: 10, weight: 'bold', family: 'Menlo' } }),
                                     ]
                                 }
                             ]
@@ -263,7 +264,7 @@ export default async function (ctx: Ctx) {
                 {
                     type: 'stack', direction: 'row', alignItems: 'center', children: [
                         { type: 'spacer' },
-                        mkText(`update at ${timeStr}`, 9, 'bold', C.muted, { font: { family: 'Menlo' } }),
+                        mkSimpleText(`update at ${timeStr}`, C.muted, { font: { size: 9, weight: 'bold', family: 'Menlo' } }),
                     ]
                 }
             ]
