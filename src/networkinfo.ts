@@ -23,7 +23,7 @@ export default async function (ctx: Ctx) {
     };
 
     const mkText = (text: string, size: number | string, weight: string, color: Color | AdaptiveColor, opts: Partial<TextElement> = {}): TextElement =>
-        ({ type: "text", text: text, font: { size, weight, ...(opts.font ?? {}) }, textColor: color, ...opts });
+        ({ type: "text", text: text, font: { size, weight }, textColor: color, ...opts });
     const mkSimpleText = (text: string, color: Color | AdaptiveColor, opts: Partial<TextElement> = {}): TextElement =>
         ({ type: "text", text: text, textColor: color, ...opts });
     const mkIcon = (src: string, color: Color | AdaptiveColor, size: number = 13): ImageElement =>
@@ -199,7 +199,7 @@ export default async function (ctx: Ctx) {
         const r2Content = r2Base;
 
         // ── 节点行：节点 IP / 归属地 / ASN / 协议 ───────────────────
-        const nodeLoc = [getFlagEmoji(nodeCountryCode), node.country, node.city].filter(Boolean).join(" ");
+        const nodeLoc = [getFlagEmoji(nodeCountryCode), node.city].filter(Boolean).join(" ");
         const asnStr = node.asn ? String(node.asn).split(' ')[0] : "";
         // const r3Content = [node.query || node.ip || "获取中...", nodeLoc, asnStr, proxyProtocol].filter(Boolean).join(" / ");
         const r3Content = [node.query || node.ip || "获取中...", nodeLoc, asnStr].filter(Boolean).join(" / ");
