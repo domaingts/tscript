@@ -16,7 +16,7 @@ export default async function (ctx: Ctx) {
         red: { light: '#CA3B32', dark: '#FF453A' },
         teal: { light: '#2E8045', dark: '#32D74B' },
         blue: { light: '#3A5F85', dark: '#5E8EB8' },
-        // purple: { light: '#6B4C9A', dark: '#8B6AA8' },
+        purple: { light: '#6B4C9A', dark: '#8B6AA8' },
         cyan: { light: '#628C7B', dark: '#73A491' },
         pingBg: { light: '#F2F2F7', dark: '#2C2C2E' },   // 双轨胶囊底色
         // proxyGreen: { light: '#2E8045', dark: '#32D74B' } // 代理盾牌色
@@ -120,22 +120,32 @@ export default async function (ctx: Ctx) {
 
         // ── 并发发起全部网络请求（IP 查询 + 双向测速）────────────────
         // const [localResp, nodeResp, pureResp, ipv6Resp, downloadSpeed, uploadSpeed] = await Promise.all([
-        const [localResp, nodeResp, pureResp, ipv6Resp] = await Promise.all([
+        // const [localResp, nodeResp, pureResp, ipv6Resp] = await Promise.all([
+        //     httpGet('https://myip.ipip.net/json'),          // 本地真实 IP + 归属地
+        //     httpGet('http://ip-api.com/json/?lang=zh-CN'),  // 节点 IP + 地理信息 + ASN
+        //     httpGet('https://my.ippure.com/v1/info'),        // 原生住宅 + 欺诈风险评分
+        //     httpGet('https://api64.ipify.org?format=json'),  // 公网 IPv6 探测（双栈接口）
+        //     // speedDownload(),                                  // 下载速率（KB/s）
+        //     // speedUpload()                                     // 上传速率（KB/s）
+        // ]);
+        const [localResp, pureResp] = await Promise.all([
             httpGet('https://myip.ipip.net/json'),          // 本地真实 IP + 归属地
-            httpGet('http://ip-api.com/json/?lang=zh-CN'),  // 节点 IP + 地理信息 + ASN
+            // httpGet('http://ip-api.com/json/?lang=zh-CN'),  // 节点 IP + 地理信息 + ASN
             httpGet('https://my.ippure.com/v1/info'),        // 原生住宅 + 欺诈风险评分
-            httpGet('https://api64.ipify.org?format=json'),  // 公网 IPv6 探测（双栈接口）
+            // httpGet('https://api64.ipify.org?format=json'),  // 公网 IPv6 探测（双栈接口）
             // speedDownload(),                                  // 下载速率（KB/s）
             // speedUpload()                                     // 上传速率（KB/s）
         ]);
 
         const { data: local, ping: localPing } = localResp;
-        const { data: node, ping: nodePing } = nodeResp;
-        const pure = pureResp.data || {};
+        // const { data: node, ping: nodePing } = nodeResp;
+        const { data: node, ping: nodePing } = pureResp;
+        // const pure = pureResp.data || {};
+        // const pure = node || {};
 
         // ── 公网 IPv6 验证（含冒号才确认为真实 IPv6，排除回退 IPv4）──
-        const publicIPv6Raw = ipv6Resp.data?.ip || '';
-        const publicIPv6 = publicIPv6Raw.includes(':') ? publicIPv6Raw : '';
+        // const publicIPv6Raw = ipv6Resp.data?.ip || '';
+        // const publicIPv6 = publicIPv6Raw.includes(':') ? publicIPv6Raw : '';
 
         // // ── 网速格式化（KB → MB 自动换档，0 显示 --）────────────────
         // const fmtSpeed = (kb: number) => kb > 0
@@ -159,7 +169,8 @@ export default async function (ctx: Ctx) {
         const nodColor = nodePing === 0 ? C.muted : (nodePing < 150 ? C.teal : (nodePing < 300 ? C.gold : C.red));
 
         // ── ISP 识别（优先 ipip 末位归属，回退 ip-api ISP/Org）──────
-        const rawISP = (Array.isArray(local.location) ? local.location[local.location.length - 1] : "") || node?.isp || node?.org;
+        // const rawISP = (Array.isArray(local.location) ? local.location[local.location.length - 1] : "") || node?.isp || node?.org;
+        const rawISP = (Array.isArray(local.location) ? local.location[local.location.length - 1] : "") || node?.asOrganization;
         const currentISP = fmtISP(rawISP);
 
         // ── 蜂窝制式映射 & 运营商 App 跳转 URL ──────────────────────
@@ -168,12 +179,13 @@ export default async function (ctx: Ctx) {
         // const jumpUrl = { "中国移动": "leadeon://", "中国电信": "ctclient://", "中国联通": "chinaunicom://" }[currentISP] || "";
 
         // // ── DNS 泄漏检测（仅代理生效时：本地和节点同属中国才触发）──
-        // const localCountryRaw = Array.isArray(local.location) ? (local.location[0] || "") : "";
+        const localCountryRaw = Array.isArray(local.location) ? (local.location[0] || "") : "";
         const nodeCountryCode = (node.countryCode || "").toUpperCase();
-        // const localIsCN = localCountryRaw.includes("中国") || localCountryRaw.includes("China");
-        // const nodeIsCN = nodeCountryCode === "CN";
+        const localIsCN = localCountryRaw.includes("中国") || localCountryRaw.includes("China");
+        const nodeIsCN = nodeCountryCode === "CN";
         // const isDnsLeak = hasProxy && localIsCN && nodeIsCN;
-        // const leakLabel = isDnsLeak ? "⚠️ 泄漏" : "";
+        const isDnsLeak = localIsCN && nodeIsCN;
+        const leakLabel = isDnsLeak ? "⚠️ 泄漏" : "";
 
         // ── 内网行：IPv4 / 网关 / [v6]（有内网 IPv6 时标注）────────
         const r1Parts = [internalIP || "未连接", gatewayIP !== internalIP ? gatewayIP : null].filter(Boolean);
@@ -183,18 +195,19 @@ export default async function (ctx: Ctx) {
         // ── 本地行：公网 IP / 归属地 / [v6]（有公网 IPv6 时标注）──
         const locStr = Array.isArray(local.location) ? local.location.slice(0, 3).join('').trim() : '';
         const r2Base = [local.ip || "获取中...", locStr].filter(Boolean).join(" / ");
-        const r2Content = publicIPv6 ? `${r2Base} / [v6]` : r2Base;
+        // const r2Content = publicIPv6 ? `${r2Base} / [v6]` : r2Base;
+        const r2Content = r2Base;
 
         // ── 节点行：节点 IP / 归属地 / ASN / 协议 ───────────────────
         const nodeLoc = [getFlagEmoji(nodeCountryCode), node.country, node.city].filter(Boolean).join(" ");
-        const asnStr = node.as ? String(node.as).split(' ')[0] : "";
+        const asnStr = node.asn ? String(node.asn).split(' ')[0] : "";
         // const r3Content = [node.query || node.ip || "获取中...", nodeLoc, asnStr, proxyProtocol].filter(Boolean).join(" / ");
         const r3Content = [node.query || node.ip || "获取中...", nodeLoc, asnStr].filter(Boolean).join(" / ");
 
         // ── 属性行：住宅类型 / 欺诈风险评分 ─────────────────────────
-        const risk = pure.fraudScore;
+        const risk = node.fraudScore;
         const riskTxt = risk === undefined ? "未知风险" : (risk >= 80 ? `极高危(${risk})` : risk >= 70 ? `高危(${risk})` : risk >= 40 ? `中危(${risk})` : `低危(${risk})`);
-        const r4Content = `${pure.isResidential === true ? "原生住宅" : (pure.isResidential === false ? "商业机房" : "未知属性")} / ${riskTxt}`;
+        const r4Content = `${node.isResidential === true ? "原生住宅" : (node.isResidential === false ? "商业机房" : "未知属性")} / ${riskTxt}`;
 
         // ── 通用行渲染器（图标 + 标签 + 内容，支持传入内容颜色）────
         const buildRow = (icon: string, color: Color | AdaptiveColor, label: string, content: string, contentColor = C.sub): StackElement => ({
@@ -222,8 +235,8 @@ export default async function (ctx: Ctx) {
                         mkIcon(wifiSsid ? 'wifi' : (cellularRadio ? 'antenna.radiowaves.left.and.right' : ':wifi.slash'), C.main, 16),
                         mkText(`${currentISP} · ${wifiSsid || radioType || "未连接"}`, 15, 'heavy', C.main, { maxLines: 1, minScale: 0.7 }),
                         { type: 'spacer' },
-                        // // DNS 泄漏警告（有泄漏时显示红色文字）
-                        // ...(leakLabel ? [{ type: 'text', text: leakLabel, font: { size: 10, weight: 'bold' }, textColor: C.red }] : []),
+                        // DNS 泄漏警告（有泄漏时显示红色文字）
+                        ...(leakLabel ? [{ type: 'text', text: leakLabel, font: { size: 10, weight: 'bold' }, textColor: C.red }] : []),
                         // // 代理状态图标（有代理时显示绿色盾牌）
                         // ...(hasProxy ? [{ type: 'image', src: 'sf-symbol:shield.lefthalf.filled', color: C.proxyGreen, width: 14, height: 14 }] : []),
                         // 双轨 Ping 胶囊（本地 | 节点，带圆角底色）
@@ -254,7 +267,7 @@ export default async function (ctx: Ctx) {
                     type: 'stack', direction: 'column', alignItems: 'start', gap: 8, flex: 1, children: [
                         buildRow('house.fill', C.teal, '内网', r1Content),
                         buildRow('location.circle.fill', C.blue, '本地', r2Content),
-                        // buildRow('network', C.purple, '节点', r3Content, isDnsLeak ? C.red : C.sub),
+                        buildRow('network', C.purple, '节点', r3Content, isDnsLeak ? C.red : C.sub),
                         // buildRow('arrow.up.and.down.circle.fill', speedColor, '网速', speedStr, speedColor),
                         buildRow('shield.lefthalf.filled', C.cyan, '属性', r4Content)
                     ]
