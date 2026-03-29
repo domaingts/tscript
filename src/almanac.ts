@@ -114,46 +114,56 @@ export default async function (ctx: Ctx) {
     try {
         const resp = await ctx.http.get(`https://raw.githubusercontent.com/zqzess/openApiData/main/calendar_new/${Y}/${Y}${P(M)}.json`, { timeout: 8000 });
         const json = await resp.json();
-        const patterns = [`${Y}-${P(M)}-${P(D)}`, `${Y}-${M}-${D}`, `${Y}/${P(M)}/${P(D)}`, `${Y}/${M}/${D}`, `${Y}${P(M)}${P(D)}`];
-        const findDateData = (data: any, depth: number = 0): any => {
-            if (!data || typeof data !== 'object' || depth > 5) return null;
-            for (const key in data) {
-                const val = data[key];
-                if (!val) continue;
-                if (patterns.some(p => String(key).includes(p))) return val;
-                if (typeof val === 'object') {
-                    const dStr = String(val.date || val.day || val.gregorian || val.oDate || "");
-                    if (patterns.some(p => dStr.includes(p))) return val;
-                    if (val.day == D && (val.month == M || (!val.month && !val.year))) return val;
-                    const res = findDateData(val, depth + 1);
-                    if (res) return res;
-                }
-            }
-            return null;
-        };
-        apiData = findDateData(json) || {};
+        // const patterns = [`${Y}-${P(M)}-${P(D)}`, `${Y}-${M}-${D}`, `${Y}/${P(M)}/${P(D)}`, `${Y}/${M}/${D}`, `${Y}${P(M)}${P(D)}`];
+        // const findDateData = (data: any, depth: number = 0): any => {
+        //     if (!data || typeof data !== 'object' || depth > 5) return null;
+        //     for (const key in data) {
+        //         const val = data[key];
+        //         if (!val) continue;
+        //         if (patterns.some(p => String(key).includes(p))) return val;
+        //         if (typeof val === 'object') {
+        //             const dStr = String(val.date || val.day || val.gregorian || val.oDate || "");
+        //             if (patterns.some(p => dStr.includes(p))) return val;
+        //             if (val.day == D && (val.month == M || (!val.month && !val.year))) return val;
+        //             const res = findDateData(val, depth + 1);
+        //             if (res) return res;
+        //         }
+        //     }
+        //     return null;
+        // };
+        // apiData = findDateData(json) || {};
+        const almanac = json?.Result[0]?.DisplayData?.resultData?.tplData?.data?.almanac;
+        if (almanac && Array.isArray(almanac)) {
+            apiData = almanac.find((n) => n.day == D);
+        }
     } catch (_) {
         fetchError = true;
     }
 
-    const getVal = (...keys: string[]) => {
-        for (const k of keys) {
-            const v = apiData[k];
-            if (!v) continue;
-            if (typeof v === 'string') return v;
-            if (Array.isArray(v)) return v.join(' ');
-        }
-        return "";
-    };
-    const rawYi = getVal("yi", "Yi", "suit").replace(/\./g, " ").trim();
-    const rawJi = getVal("ji", "Ji", "avoid").replace(/\./g, " ").trim();
+    // const getVal = (...keys: string[]) => {
+    //     for (const k of keys) {
+    //         const v = apiData[k];
+    //         if (!v) continue;
+    //         if (typeof v === 'string') return v;
+    //         if (Array.isArray(v)) return v.join(' ');
+    //     }
+    //     return "";
+    // };
+    const getVal = (key: string) => apiData[key] || '';
+    // const rawYi = getVal("suit").replace(/\./g, " ").trim();
+    // const rawJi = getVal("avoid").replace(/\./g, " ").trim();
+    const rawYi = getVal("suit").trim().split(/\./).slice(0, 6).join(" ");
+    const rawJi = getVal("avoid").trim().split(/\./).slice(0, 6).join(" ");
 
-    let chongshaInfo = getVal("chongsha", "ChongSha", "chong");
-    if (!chongshaInfo || chongshaInfo === "无") {
-        const cycle = (Math.round((Date.UTC(Y, M - 1, D) - Date.UTC(1900, 0, 31)) / 86400000) + 40) % 60;
-        chongshaInfo = `冲${"鼠牛虎兔龙蛇马羊猴鸡狗猪"[(cycle % 12 + 6) % 12]}(${"甲乙丙丁戊己庚辛壬癸"[(cycle + 6) % 10]}${"子丑寅卯辰巳午未申酉戌亥"[(cycle + 6) % 12]})煞${["南", "东", "北", "西"][cycle % 12 % 4]}`;
-    }
-    const starStr = "⭐".repeat(parseInt(getVal("score", "Score", "pingfen", "star")) || (rawYi.length > rawJi.length + 8 ? 5 : 4));
+    // let chongshaInfo = getVal("chongsha", "ChongSha", "chong");
+    // if (!chongshaInfo || chongshaInfo === "无") {
+    //     const cycle = (Math.round((Date.UTC(Y, M - 1, D) - Date.UTC(1900, 0, 31)) / 86400000) + 40) % 60;
+    //     chongshaInfo = `冲${"鼠牛虎兔龙蛇马羊猴鸡狗猪"[(cycle % 12 + 6) % 12]}(${"甲乙丙丁戊己庚辛壬癸"[(cycle + 6) % 10]}${"子丑寅卯辰巳午未申酉戌亥"[(cycle + 6) % 12]})煞${["南", "东", "北", "西"][cycle % 12 % 4]}`;
+    // }
+    const cycle = (Math.round((Date.UTC(Y, M - 1, D) - Date.UTC(1900, 0, 31)) / 86400000) + 40) % 60;
+    const chongshaInfo = `冲${"鼠牛虎兔龙蛇马羊猴鸡狗猪"[(cycle % 12 + 6) % 12]}(${"甲乙丙丁戊己庚辛壬癸"[(cycle + 6) % 10]}${"子丑寅卯辰巳午未申酉戌亥"[(cycle + 6) % 12]})煞${["南", "东", "北", "西"][cycle % 12 % 4]}`;
+    // const starStr = "⭐".repeat(parseInt(getVal("score", "Score", "pingfen", "star")) || (rawYi.length > rawJi.length + 8 ? 5 : 4));
+    const starStr = "⭐".repeat(rawYi.length > rawJi.length + 8 ? 5 : 4);
 
     const splitText = (str: string, maxW = FIRST_LINE_MAX_CHARS) => {
         if (!str) return [];
