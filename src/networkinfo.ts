@@ -31,12 +31,11 @@ export default async function (ctx: Ctx) {
 
     // ── 通用 HTTP GET（含耗时统计，用于 Ping 计算）────────────────────
     const httpGet = async (url: string) => {
-        try {
-            const start = Date.now();
-            const resp = await ctx.http.get(url, { headers: { "User-Agent": "Mozilla/5.0" }, timeout: 5000 });
-            const json = await resp.json();
-            return { data: json.data || json, ping: Date.now() - start };
-        } catch (e) { return { data: {}, ping: 0 }; }
+        const start = Date.now();
+        return await ctx.http.get(url, { headers: { "User-Agent": "Mozilla/5.0" }, timeout: 5000 })
+            .then((resp) => resp.json())
+            .then((json) => { return { data: json.data || json, ping: Date.now() - start } })
+            .catch((e) => { return { data: {}, ping: 0 } });
     };
 
     // // ── 下载测速（Cloudflare 100KB，稳定可达）────────────────────────
